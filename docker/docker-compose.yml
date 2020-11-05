@@ -1,0 +1,67 @@
+version: "3.8"
+
+x-daemons: &daemons
+    tty: true
+    privileged: true
+    stdin_open: true
+    env_file:
+        - .env
+    labels:
+        storage: "true"
+        network: "n"
+
+x-application: &application
+    restart: unless-stopped
+    env_file:
+        - .env
+    labels:
+        application: "true"
+        network: "project"
+    networks:
+        - project-network
+
+services:
+
+    nginx:
+        <<: *daemons
+        image: nginx:latest
+        expose:
+            - "80"
+
+    redis:
+        <<: *daemons
+        image: redis:latest
+        command: ["redis-server","--appendonly","yes"]
+
+    redis-commander:
+        image: rediscommander/redis-commander:latest
+        <<: *daemons
+        depends_on:
+            - redis
+
+    mysql:
+        image: mysql:latest
+        <<: *daemons
+
+    project:
+        <<: *application
+        links:
+            -  mysql
+            -  redis
+            -  nginx
+
+    front:
+        <<: *application
+        links:
+            - project
+
+    agent:
+        <<: *daemons
+        cap_add:
+            - SYS_PTRACE
+        network_mode: host
+        pid: host
+
+networks:
+  project-network:
+      driver: bridge

@@ -1,0 +1,72 @@
+version: "3.8"
+
+services:
+
+    nginx:
+        volumes:
+            - "./:/var/www/project"
+            - "./nginx/ssl:/etc/nginx/ssl"
+            - "./nginx/logs:/var/log/nginx"
+            - "./nginx/upstream.conf:/etc/nginx/conf.d/upstream.conf"
+            - "./nginx/default.conf:/etc/nginx/conf.d/default.conf"
+        ports:
+            - "${NGINX_PORT}:80"
+
+    redis:
+        ports:
+            - "${REDIS_PORT}:6379"
+        volumes:
+            - "${DOCKER_VOLUMES}/redis:/data"
+
+    redis-commander:
+        ports:
+            - "${REDIS_COMMANDER_PORT}:8081"
+
+    mysql:
+        ports:
+            - "${MYSQL_PORT}:3306"
+        expose:
+            - "3306"
+        volumes:
+            - "${DOCKER_VOLUMES}/mysql:/var/lib/mysql:cached"
+
+    lions:
+        build:
+            context: ..
+            dockerfile: docker/php/Dockerfile
+        ports:
+          - "${PHP_PORT}:9000"
+        expose:
+            - "9000"
+        volumes:
+            - "../:/var/www/project"
+
+    front:
+        build:
+            context: ..
+            dockerfile: docker/front/Dockerfile
+        ports:
+            - "${FRONT_PORT}:3000"
+        volumes:
+            - "../:/var/www/front"
+
+    agent:
+        build:
+            context: ..
+            dockerfile: docker/agent/Dockerfile
+        volumes:
+            - "./agent/newrelic-infra.yml:/etc/newrelic-infra.yml"
+            - "/var/run/docker.sock:/var/run/docker.sock"
+            - "/:/host:ro"
+
+#    php-lions-agent:
+#        build:
+#            context: ..
+#            dockerfile: docker/agent/Dockerfile.php
+
+
+volumes:
+  project-mysql:
+    driver: local
+  project-redis:
+    driver: local
